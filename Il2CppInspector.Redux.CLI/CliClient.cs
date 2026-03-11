@@ -9,7 +9,7 @@ public class CliClient : IDisposable
 {
     public bool ImportCompleted { get; private set; }
 
-    private volatile int _finishedLoadingCount = 0;
+    private TaskCompletionSource _loadingTcs = new();
 
     private readonly HubConnection _connection;
     private readonly List<IDisposable> _commandListeners = [];
@@ -69,9 +69,7 @@ public class CliClient : IDisposable
 
     public async ValueTask WaitForLoadingToFinishAsync(CancellationToken cancellationToken = default)
     {
-        var currentLoadingCount = _finishedLoadingCount;
-        while (_finishedLoadingCount == currentLoadingCount)
-            await Task.Delay(10, cancellationToken);
+        await _loadingTcs.Task.WaitAsync(cancellationToken);
     }
 
     private async Task ShowLogMessage(string message)
@@ -87,6 +85,8 @@ public class CliClient : IDisposable
 
     private void BeginLoading()
     {
+        _loadingTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
         _logMessageChannel = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
         {
             SingleReader = true,
@@ -115,7 +115,7 @@ public class CliClient : IDisposable
             _statusTask = null;
         }
 
-        Interlocked.Increment(ref _finishedLoadingCount);
+        _loadingTcs.TrySetResult();
     }
 
     private static void ShowInfoToast(string message)
