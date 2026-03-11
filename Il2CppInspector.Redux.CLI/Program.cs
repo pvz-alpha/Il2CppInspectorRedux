@@ -43,5 +43,6 @@ consoleApp.Configure(config =>
 });
 
 var exitCode = await consoleApp.RunAsync(args);
-await app.StopAsync();
+using var shutdownCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+await app.StopAsync(shutdownCts.Token);
 Environment.Exit(exitCode);

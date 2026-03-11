@@ -1,4 +1,4 @@
-﻿using System.Threading.Channels;
+using System.Threading.Channels;
 using Il2CppInspector.Redux.FrontendCore;
 using Microsoft.AspNetCore.SignalR.Client;
 using Spectre.Console;
@@ -15,6 +15,7 @@ public class CliClient : IDisposable
     private readonly List<IDisposable> _commandListeners = [];
 
     private Channel<string>? _logMessageChannel;
+    private Task? _statusTask;
 
     public CliClient(HubConnection connection)
     {
@@ -93,7 +94,7 @@ public class CliClient : IDisposable
             AllowSynchronousContinuations = true
         });
 
-        AnsiConsole.Status()
+        _statusTask = AnsiConsole.Status()
             .Spinner(Spinner.Known.Triangle)
             .StartAsync("Loading", async ctx =>
             {
@@ -104,9 +105,16 @@ public class CliClient : IDisposable
             });
     }
 
-    private void FinishLoading()
+    private async Task FinishLoading()
     {
         _logMessageChannel?.Writer.Complete();
+
+        if (_statusTask != null)
+        {
+            await _statusTask;
+            _statusTask = null;
+        }
+
         Interlocked.Increment(ref _finishedLoadingCount);
     }
 
