@@ -42,5 +42,6 @@ consoleApp.Configure(config =>
         .WithDescription("Processes the provided input data into one or more output formats.");
 });
 
-await consoleApp.RunAsync(args);
+var exitCode = await consoleApp.RunAsync(args);
 await app.StopAsync();
+Environment.Exit(exitCode);
